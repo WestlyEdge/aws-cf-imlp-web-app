@@ -1,0 +1,371 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description:
+
+  This template creates
+  infrastructure used for training
+  purposes in the IMLP IAC bootcamp.
+
+Parameters:
+
+  EC2InstanceType:
+    Type: String
+    AllowedValues:
+      - t2.micro
+    Description: EC2 Instance Type... t2.micro, m1.small, m1.large, etc...
+
+  EC2ImageId:
+    Type: String
+    Description: The id of the AMI to use
+
+  Env:
+    Type: String
+    Description: Sandbox, Dev, or Prod
+
+  LogGroupName:
+    Type: String
+    Description: name of the cloudwatch log group
+
+  LogRetentionDays:
+    Type: Number
+    Description: LogGroup RetentionInDays attribute value
+
+Resources:
+
+#EC2s
+
+  myEC2Instance1:
+    Type: AWS::EC2::Instance
+    DependsOn: myLogGroup
+    Metadata:
+      AWS::CloudFormation::Init:
+
+        configSets:
+          configs:
+            - config-cloudwatch
+            - config-webapp
+
+        config-cloudwatch:
+          packages:
+            yum:
+              awslogs: []
+          files:
+
+            /etc/awslogs/awslogs.conf:
+              content: !Sub |
+                [general]
+                state_file = /var/lib/awslogs/agent-state
+
+                [/var/log/cloud-init.log]
+                file = /var/log/cloud-init.log
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/cloud-init.log
+                datetime_format = %b %d %H:%M:%S
+                time_zone = UTC
+
+                [/var/log/cloud-init-output.log]
+                file = /var/log/cloud-init-output.log
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/cloud-init-output.log
+                datetime_format = %d %b %Y %H:%M:%S
+                time_zone = UTC
+
+                [/var/log/cfn-init.log]
+                file = /var/log/cfn-init.log
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/cfn-init.log
+                datetime_format = %Y-%m-%d %H:%M:%S
+                time_zone = UTC
+
+                [/var/log/httpd]
+                file = /var/log/httpd/*
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/httpd
+                datetime_format = %d/%b/%Y:%H:%M:%S
+                time_zone = UTC
+
+            /etc/awslogs/awscli.conf:
+              content: !Sub |
+                [plugins]
+                cwlogs = cwlogs
+                [default]
+                region = ${AWS::Region}
+
+          services:
+            sysvinit:
+              awslogsd:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/awslogs/awslogs.conf
+                  - /etc/awslogs/awscli.conf
+
+        config-webapp:
+          packages:
+            yum:
+              httpd: []
+              php: []
+          files:
+            /var/www/html/index.php:
+              content: !Sub |
+                <?php print "Hello World, IMLP was here, it works!, ${Env} 1"; ?>
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+
+    Properties:
+      InstanceType: !Ref EC2InstanceType
+      ImageId: !Ref EC2ImageId
+      IamInstanceProfile: !Ref myEC2InstanceProfile
+      SecurityGroupIds:
+        - !Ref myEC2SecurityGroup
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "IMLP-${Env}-Networking-PrivateSubnet1-ID"
+      Tags:
+        - Key: Name
+          Value: !Join [" ", [IMLP, !Ref Env, EC2 Instance 1]]
+
+      UserData:
+        'Fn::Base64':
+          !Sub |
+          #!bin/bash -xe
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource myEC2Instance1 --region ${AWS::Region} --configsets configs
+
+  myEC2Instance2:
+    Type: AWS::EC2::Instance
+    DependsOn: myLogGroup
+    Metadata:
+      AWS::CloudFormation::Init:
+
+        configSets:
+          configs:
+            - config-cloudwatch
+            - config-webapp
+
+        config-cloudwatch:
+          packages:
+            yum:
+              awslogs: []
+          files:
+
+            /etc/awslogs/awslogs.conf:
+              content: !Sub |
+                [general]
+                state_file = /var/lib/awslogs/agent-state
+
+                [/var/log/cloud-init.log]
+                file = /var/log/cloud-init.log
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/cloud-init.log
+                datetime_format = %b %d %H:%M:%S
+                time_zone = UTC
+
+                [/var/log/cloud-init-output.log]
+                file = /var/log/cloud-init-output.log
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/cloud-init-output.log
+                datetime_format = %d %b %Y %H:%M:%S
+                time_zone = UTC
+
+                [/var/log/cfn-init.log]
+                file = /var/log/cfn-init.log
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/cfn-init.log
+                datetime_format = %Y-%m-%d %H:%M:%S
+                time_zone = UTC
+
+                [/var/log/httpd]
+                file = /var/log/httpd/*
+                log_group_name = ${LogGroupName}
+                log_stream_name = {hostname}/{instance_id}/httpd
+                datetime_format = %d/%b/%Y:%H:%M:%S
+                time_zone = UTC
+
+            /etc/awslogs/awscli.conf:
+              content: !Sub |
+                [plugins]
+                cwlogs = cwlogs
+                [default]
+                region = ${AWS::Region}
+
+          services:
+            sysvinit:
+              awslogsd:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/awslogs/awslogs.conf
+                  - /etc/awslogs/awscli.conf
+
+        config-webapp:
+          packages:
+            yum:
+              httpd: []
+              php: []
+          files:
+            /var/www/html/index.php:
+              content: !Sub |
+                <?php print "Hello World, IMLP was here, it works!, ${Env} 2"; ?>
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+
+    Properties:
+      InstanceType: !Ref EC2InstanceType
+      ImageId: !Ref EC2ImageId
+      IamInstanceProfile: !Ref myEC2InstanceProfile
+      SecurityGroupIds:
+        - !Ref myEC2SecurityGroup
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "IMLP-${Env}-Networking-PrivateSubnet2-ID"
+      Tags:
+        - Key: Name
+          Value: !Join [" ", [IMLP, !Ref Env, EC2 Instance 2]]
+
+      UserData:
+        'Fn::Base64':
+          !Sub |
+          #!bin/bash -xe
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource myEC2Instance2 --region ${AWS::Region} --configsets configs
+
+# IAM
+
+  myLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: LogRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:Create*
+                  - logs:PutLogEvents
+                Resource:
+                  - arn:aws:logs:*:*:*
+
+  myEC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: myLogRole
+
+# Security Groups
+
+  myEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open port 80
+      VpcId:
+        Fn::ImportValue:
+          !Sub "IMLP-${Env}-Networking-Vpc-ID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          SourceSecurityGroupId: !GetAtt myALBSecurityGroup.GroupId
+
+  myALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open port 80
+      VpcId:
+        Fn::ImportValue:
+          !Sub "IMLP-${Env}-Networking-Vpc-ID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+
+# Load Balancer
+
+  myALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      IpAddressType: ipv4
+      Name: !Join [ "-", [ IMLP, !Ref Env, Load-Balancer ] ]
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref myALBSecurityGroup
+      Subnets:
+        - Fn::ImportValue:
+            !Sub "IMLP-${Env}-Networking-PublicSubnet1-ID"
+        - Fn::ImportValue:
+            !Sub "IMLP-${Env}-Networking-PublicSubnet2-ID"
+      Tags:
+        - Key: Name
+          Value: !Join [" ", [IMLP, !Ref Env, ALB]]
+
+  myALBListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    DependsOn:
+      - myALB
+      - myALBTargetGroup
+    Properties:
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions:
+        - Type: "forward"
+          TargetGroupArn: !Ref myALBTargetGroup
+      LoadBalancerArn: !Ref myALB
+
+  myALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Join [ "-", [ IMLP, !Ref Env, ALB-TargetGroup ] ]
+      HealthCheckEnabled: true
+      TargetType: instance
+      Protocol: HTTP
+      Port: 80
+      VpcId:
+        Fn::ImportValue:
+          !Sub "IMLP-${Env}-Networking-Vpc-ID"
+
+      Targets:
+        - Id: !Ref myEC2Instance1
+        - Id: !Ref myEC2Instance2
+      Tags:
+        - Key: Name
+          Value: !Join [ " ", [ IMLP, !Ref Env, ALB TargetGroup ] ]
+
+# CloudWatch
+
+  myLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      RetentionInDays: !Ref LogRetentionDays
+
+# Outputs
+
+Outputs:
+
+  LoadBalancerDNS:
+    Description:
+      The Load Balancer DNS Path
+    Value:
+      !GetAtt
+      - myALB
+      - DNSName

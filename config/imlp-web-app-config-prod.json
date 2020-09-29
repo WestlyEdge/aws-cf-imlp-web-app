@@ -1,0 +1,12 @@
+{
+  "Parameters" : {
+    "EC2InstanceType" : "t2.micro",
+    "EC2ImageId" : "ami-00c03f7f7f2ec15c3",
+    "Env" : "Prod",
+    "LogGroupName" : "IMLP-Prod-WebApp-Logs",
+    "LogRetentionDays" : "7"
+  },
+  "Tags" : {
+    "Env" : "Prod"
+  }
+}
